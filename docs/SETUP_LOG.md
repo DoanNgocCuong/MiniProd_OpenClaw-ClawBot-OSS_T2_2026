@@ -73,9 +73,39 @@ File nằm tại: `~/.openclaw/agents/main/agent/auth-profiles.json`
 
 ## 4. Start Gateway
 
+### Cách 1 — Chạy foreground (manual)
+
 ```bash
 source ~/.nvm/nvm.sh && nvm use 22 && openclaw gateway
 ```
+
+### Cách 2 — Daemon systemd (khuyến nghị, tự chạy khi boot)
+
+```bash
+# Cài daemon một lần
+openclaw gateway install --force --runtime node
+
+# Enable + start
+systemctl --user daemon-reload
+systemctl --user enable openclaw-gateway
+systemctl --user start openclaw-gateway
+
+# Kiểm tra
+systemctl --user status openclaw-gateway
+```
+
+Sau khi cài daemon, gateway **tự chạy ngầm** mỗi lần khởi động máy — không cần chạy tay nữa.
+
+Các lệnh quản lý daemon:
+
+```bash
+openclaw gateway start    # start
+openclaw gateway stop     # stop
+openclaw gateway restart  # restart
+openclaw gateway status   # xem trạng thái
+```
+
+> **Lưu ý WSL2:** Systemd user daemon hoạt động khi WSL session đang chạy. Nếu đóng terminal Windows thì daemon cũng dừng theo. Để chạy 24/7 cần giữ WSL active hoặc dùng Windows Task Scheduler.
 
 Kiểm tra health:
 
