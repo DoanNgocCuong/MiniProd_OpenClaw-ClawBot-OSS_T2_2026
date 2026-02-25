@@ -36,49 +36,73 @@ Bot dùng `WebFetch` để đọc nội dung web. **Hoạt động tốt với:*
 
 ---
 
-## 3. Bypass Facebook — Browser Skill (Playwright)
+## 3. Bypass Facebook — Browser Skill
 
-OpenClaw có **Browser skill** dùng Chrome thật để simulate user, bypass được Facebook.
+OpenClaw có **Browser skill** điều khiển Chrome thật qua extension, bypass được Facebook.
 
-### Cách dùng
+### Cách hoạt động
 
-OpenClaw browser dùng Chrome trên máy. Trên Windows, Chrome có ở:
-```
-C:\Program Files\Google\Chrome\Application\chrome.exe
-```
+OpenClaw KHÔNG tự launch Chrome. Thay vào đó, dùng **Chrome Extension** làm relay:
 
-Cấu hình browser path trong OpenClaw:
+1. Cài OpenClaw Chrome Extension trên Windows Chrome
+2. Extension kết nối về gateway (`localhost:18789`) qua CDP port `18792`
+3. Bot gửi lệnh → extension thực thi trên Chrome thật → trả kết quả về
 
+### Setup (WSL2 + Windows Chrome)
+
+**Bước 1 — Config path:**
 ```bash
 openclaw config set browser.executablePath "/mnt/c/Program Files/Google/Chrome/Application/chrome.exe"
+openclaw gateway restart
 openclaw browser status
+# → detectedPath: /mnt/c/Program Files/Google/Chrome/Application/chrome.exe
+```
+
+**Bước 2 — Cài Chrome Extension:**
+
+Mở Chrome trên Windows, vào: `chrome://extensions/` → Enable "Developer mode" → Load unpacked từ thư mục extension của OpenClaw.
+
+> Hoặc tìm extension trên Chrome Web Store: tìm "OpenClaw"
+
+**Bước 3 — Attach extension:**
+
+Click icon OpenClaw trên thanh extension của Chrome → extension sẽ connect về gateway.
+
+**Bước 4 — Test:**
+```bash
+openclaw browser status       # running: true
+openclaw browser screenshot   # chụp tab hiện tại
+openclaw browser snapshot     # đọc nội dung trang
 ```
 
 ### 3 cách tiếp cận (theo cộng đồng)
 
 | Cách | Phổ biến | Use case |
 |---|---|---|
-| **Browser skill** (Playwright/Chrome) | 70-80% | Public profile/page, cần JS render |
+| **Browser skill** (Chrome Extension) | 70-80% | Public profile/page, cần JS render |
 | **Facebook Graph API** | 20% | Page management, post/comment |
 | ~~WebFetch thẳng~~ | ❌ | Luôn fail với Facebook |
 
-### Browser skill — cài và dùng
+### Browser skill — các lệnh hay dùng
 
 ```bash
-# Kiểm tra browser skill
-openclaw skills list | grep browser
+# Trạng thái browser
+openclaw browser status
 
-# Start browser session
-openclaw browser open --url "https://www.facebook.com/profile"
+# Mở URL mới
+openclaw browser open https://www.facebook.com/profile
 
-# Screenshot
+# Chụp màn hình
 openclaw browser screenshot
 
-# Đọc nội dung trang
+# Đọc nội dung trang (AI-optimized)
 openclaw browser snapshot
+
+# Danh sách tab đang mở
+openclaw browser tabs
 ```
 
-> **Lưu ý WSL2:** Browser chạy từ Windows Chrome, OpenClaw kết nối qua CDP port `18792`. Nếu Chrome chưa mở, OpenClaw sẽ tự launch.
+> **Lưu ý WSL2:** Extension chạy trên Windows Chrome, gateway chạy trong WSL. Cần Chrome đang mở và extension đã attach thì bot mới dùng được browser skill.
 
 ---
 
