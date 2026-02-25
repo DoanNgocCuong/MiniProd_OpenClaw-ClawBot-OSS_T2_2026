@@ -1,4 +1,4 @@
-# ClawBot — Setup Log & Bug Fixes
+# ClawBot — Setup Log, Hướng dẫn & Bug Fixes
 
 > Ghi lại toàn bộ quá trình deploy ClawBot lần đầu (2026-02-25) trên WSL2 Ubuntu.
 > Mỗi bug có: **triệu chứng → nguyên nhân → cách fix**.
@@ -10,10 +10,14 @@
 OpenClaw là một **npm global package**, không phải repo clone về:
 
 ```bash
+# Yêu cầu Node.js >= 22.12.0
+source ~/.nvm/nvm.sh
+nvm install 22 && nvm alias default 22
+
 npm install -g openclaw
 ```
 
-Sau khi cài, các file config của OpenClaw nằm ở:
+Sau khi cài, config nằm ở:
 
 ```
 ~/.openclaw/
@@ -27,38 +31,115 @@ Sau khi cài, các file config của OpenClaw nằm ở:
 └── logs/
 ```
 
+Hoặc dùng script có sẵn:
+
+```bash
+./scripts/install_openclaw.sh
+```
+
 ---
 
 ## 2. Onboarding
 
 ```bash
-openclaw onboard --non-interactive --accept-risk
-openclaw models set google/gemini-2.0-flash
-openclaw agents add test-agent --model google/gemini-2.0-flash --non-interactive
+openclaw onboard
+openclaw models set "openrouter/z-ai/glm-4.5-air:free"
+openclaw agents add test-agent --model "openrouter/z-ai/glm-4.5-air:free" --non-interactive
 ```
 
 ---
 
-## 3. Thêm model GLM-5 (KiloCode provider)
+## 3. Cấu hình API key (OpenRouter)
 
-Theo yêu cầu thêm model `kilo-code/z-ai/glm-5:free` (free, không cần API key riêng).
-
-Trong `~/.openclaw/openclaw.json`, phần `agents.defaults.models`:
+Lấy free API key tại [openrouter.ai](https://openrouter.ai). Sau đó ghi vào `auth-profiles.json`:
 
 ```json
-"models": {
-  "google/gemini-2.0-flash": {},
-  "openrouter/z-ai/glm-4.5-air:free": {}
+{
+  "version": 1,
+  "profiles": {
+    "openrouter:default": {
+      "type": "api_key",
+      "provider": "openrouter",
+      "key": "<your_openrouter_key>"
+    }
+  },
+  "order": ["openrouter:default"]
 }
 ```
 
-> **Lưu ý:** Model `glm-5` thực chất thuộc KiloCode provider. Trên OpenRouter tên là `z-ai/glm-4.5-air:free`. Để dùng qua OpenRouter cần đặt primary là `openrouter/z-ai/glm-4.5-air:free`.
+File nằm tại: `~/.openclaw/agents/main/agent/auth-profiles.json`
 
 ---
 
-## 4. Bugs gặp phải & Cách fix
+## 4. Start Gateway
+
+```bash
+source ~/.nvm/nvm.sh && nvm use 22 && openclaw gateway
+```
+
+Kiểm tra health:
+
+```bash
+openclaw health
+```
 
 ---
+
+## 5. Kết nối Telegram
+
+### Bước 1 — Tạo bot (BotFather)
+
+1. Mở Telegram, tìm **@BotFather**
+2. Gửi `/newbot`, đặt tên + username (phải kết thúc bằng `bot`)
+3. Copy **token** (dạng `1234567890:AAF...`)
+
+### Bước 2 — Thêm channel
+
+```bash
+export TELEGRAM_BOT_TOKEN="your_token_here"
+openclaw channels add telegram --token "$TELEGRAM_BOT_TOKEN"
+```
+
+Hoặc đặt token vào `config/.env` rồi chạy:
+
+```bash
+./scripts/add_telegram_channel.sh
+```
+
+### Bước 3 — Pairing
+
+1. Mở bot trên Telegram, gửi bất kỳ tin (vd: `hello`)
+2. Bot trả về mã 6 số (vd: `483921`)
+3. Approve:
+
+```bash
+openclaw pairing approve telegram 483921
+# hoặc
+./scripts/approve_pairing.sh 483921
+```
+
+### Windows (PowerShell)
+
+```powershell
+.\scripts\script_window.ps1 Install       # cài OpenClaw qua WSL
+.\scripts\script_window.ps1 AddChannel    # thêm Telegram (cần .env với TELEGRAM_BOT_TOKEN)
+.\scripts\script_window.ps1 Approve -Code 483921
+```
+
+---
+
+## 6. Mở Control UI (Dashboard)
+
+```bash
+openclaw dashboard
+# Output: http://127.0.0.1:18789/#token=<gateway_token>
+```
+
+Mở đúng URL đó trong browser — token tự lưu vào Control UI.
+
+---
+
+## 7. Bugs gặp phải & Cách fix
 
 ### Bug 1 — Config validation: Unrecognized keys
 
@@ -68,12 +149,12 @@ Invalid config at ~/.openclaw/openclaw.json:
 - agents.defaults.models.kilo-code/z-ai/glm-5:free: Unrecognized keys: "contextWindow", "apiKey"
 ```
 
-**Nguyên nhân:** Model entry trong `openclaw.json` không hỗ trợ các key `contextWindow` hay `apiKey`. Entry phải là object rỗng `{}`.
+**Nguyên nhân:** Model entry trong `openclaw.json` không hỗ trợ key `contextWindow` hay `apiKey`. Phải là object rỗng.
 
 **Fix:**
 ```json
 "models": {
-  "kilo-code/z-ai/glm-5:free": {}
+  "openrouter/z-ai/glm-4.5-air:free": {}
 }
 ```
 
@@ -87,13 +168,9 @@ openclaw requires Node >=22.12.0.
 Detected: node 20.20.0
 ```
 
-**Nguyên nhân:** Node.js v20 không đủ, OpenClaw yêu cầu v22+. NVM có sẵn v22.22.0 nhưng chưa được dùng.
-
 **Fix:**
 ```bash
-source ~/.nvm/nvm.sh
-nvm use 22
-nvm alias default 22   # đặt v22 làm default vĩnh viễn
+source ~/.nvm/nvm.sh && nvm use 22 && nvm alias default 22
 ```
 
 ---
@@ -103,69 +180,48 @@ nvm alias default 22   # đặt v22 làm default vĩnh viễn
 **Triệu chứng:**
 ```
 error: unknown command 'start'
-(Did you mean status?)
 ```
 
-**Nguyên nhân:** Command để khởi động gateway là `gateway`, không phải `start`.
+**Nguyên nhân:** Command đúng là `gateway`.
 
 **Fix:**
 ```bash
-openclaw gateway          # chạy foreground
-openclaw gateway --force  # kill port cũ rồi chạy lại
+openclaw gateway --force
 ```
 
 ---
 
-### Bug 4 — Gateway không nhận Google API key
+### Bug 4 — Gateway không nhận API key
 
 **Triệu chứng:**
 ```
-FailoverError: No API key found for provider "google".
-Auth store: ~/.openclaw/agents/main/agent/auth-profiles.json
+FailoverError: No API key found for provider "openrouter".
 ```
 
-**Nguyên nhân:** Gateway không nhận key từ `auth-profiles.json` vì file dùng **sai format**. Hai lỗi format:
-1. `profiles` là array `[...]` thay vì object `{...}` keyed by profile ID
-2. Field tên là `token` thay vì `key`, thiếu field `type`
+**Nguyên nhân:** `auth-profiles.json` sai format — `profiles` là array thay vì object, field `token` thay vì `key`, thiếu `type`.
 
-**Format sai (array):**
+**Format sai:**
 ```json
 {
   "profiles": [
-    { "id": "google:manual", "provider": "google", "token": "AIza..." }
-  ],
-  "order": ["google:manual"]
+    { "id": "openrouter:manual", "provider": "openrouter", "token": "sk-..." }
+  ]
 }
 ```
 
-**Format đúng (object):**
+**Format đúng:**
 ```json
 {
+  "version": 1,
   "profiles": {
     "openrouter:default": {
       "type": "api_key",
       "provider": "openrouter",
       "key": "sk-or-v1-..."
-    },
-    "google:default": {
-      "type": "api_key",
-      "provider": "google",
-      "key": "AIzaSy..."
     }
   },
-  "order": ["openrouter:default", "google:default"]
+  "order": ["openrouter:default"]
 }
-```
-
-**Các quy tắc format `auth-profiles.json`:**
-- `profiles` là **object**, key là profile ID (dạng `provider:default`)
-- Mỗi profile cần `type: "api_key"`, `provider`, và `key`
-- `order` là array profile ID theo thứ tự ưu tiên
-
-**Fix:** Viết lại file đúng format như trên. Sau khi fix, `openclaw models status` hiện:
-```
-- openrouter effective=profiles:~/.openclaw/agents/main/agent/auth-profiles.json
-              | profiles=1 (api_key=1) | openrouter:default=sk-or-v1...
 ```
 
 ---
@@ -177,20 +233,11 @@ Auth store: ~/.openclaw/agents/main/agent/auth-profiles.json
 FailoverError: Unknown model: kilo-code/z-ai/glm-5:free
 ```
 
-**Nguyên nhân:** Model ID không tồn tại trực tiếp trong registry của gateway khi dùng OpenRouter provider.
-
-**Nguyên nhân sâu hơn (từ source code):** `kilo-code/` là prefix của KiloCode provider (`https://api.kilo.ai/api/gateway/`). Để dùng GLM qua OpenRouter thì ID phải là `openrouter/z-ai/glm-4.5-air:free`.
+**Nguyên nhân:** `kilo-code/` là KiloCode provider riêng. Qua OpenRouter thì ID đúng là `openrouter/z-ai/glm-4.5-air:free`.
 
 **Fix:**
 ```bash
 openclaw models set "openrouter/z-ai/glm-4.5-air:free"
-```
-
-Hoặc sửa trực tiếp `openclaw.json`:
-```json
-"model": {
-  "primary": "openrouter/z-ai/glm-4.5-air:free"
-}
 ```
 
 ---
@@ -199,28 +246,22 @@ Hoặc sửa trực tiếp `openclaw.json`:
 
 **Triệu chứng:** Dashboard hiện `unauthorized: gateway token missing`
 
-**Nguyên nhân:** URL mở Control UI không kèm token xác thực. Gateway dùng token-based auth.
-
-**Fix:** Lấy URL đầy đủ kèm token:
+**Fix:**
 ```bash
 openclaw dashboard
-# Output: http://127.0.0.1:18789/#token=73d760eb3137840b669e68ffc0740eeb248ba3c0a7eb4f35
+# Mở URL có kèm #token=... trong browser
 ```
-
-Mở đúng URL đó trong browser (token sẽ tự lưu vào Control UI settings).
 
 ---
 
-## 5. Cấu hình cuối cùng (v1.0)
+## 8. Cấu hình cuối cùng (v1.0)
 
-**`~/.openclaw/openclaw.json` (phần quan trọng):**
+**`~/.openclaw/openclaw.json`:**
 ```json
 {
   "agents": {
     "defaults": {
-      "model": {
-        "primary": "openrouter/z-ai/glm-4.5-air:free"
-      },
+      "model": { "primary": "openrouter/z-ai/glm-4.5-air:free" },
       "models": {
         "google/gemini-2.0-flash": {},
         "openrouter/z-ai/glm-4.5-air:free": {}
@@ -231,42 +272,24 @@ Mở đúng URL đó trong browser (token sẽ tự lưu vào Control UI setting
     "port": 18789,
     "mode": "local",
     "bind": "loopback",
-    "auth": {
-      "mode": "token",
-      "token": "<gateway_token>"
-    }
+    "auth": { "mode": "token", "token": "<gateway_token>" }
   }
 }
 ```
 
-**`~/.openclaw/agents/main/agent/auth-profiles.json`:**
-```json
-{
-  "version": 1,
-  "profiles": {
-    "openrouter:default": {
-      "type": "api_key",
-      "provider": "openrouter",
-      "key": "<openrouter_key>"
-    },
-    "google:default": {
-      "type": "api_key",
-      "provider": "google",
-      "key": "<google_key>"
-    }
-  },
-  "order": ["openrouter:default", "google:default"]
-}
-```
+---
 
-**Start command:**
-```bash
-source ~/.nvm/nvm.sh && nvm use 22 && openclaw gateway
-```
+## 9. Bảo mật
+
+- Hội thoại & memory **nằm trên máy** — không gửi lên server OpenClaw
+- Telegram bot chỉ cho **user đã pair** chat; người khác bị drop
+- Khi gọi LLM, tin nhắn gửi tới API OpenRouter/Google theo privacy policy của họ
+- **Không** nhập data nhạy cảm (DB, private key) vào chat khi test
+- Gateway chạy `localhost` — không expose ra internet
 
 ---
 
-## 6. Môi trường
+## 10. Môi trường
 
 | Thành phần | Version |
 |---|---|

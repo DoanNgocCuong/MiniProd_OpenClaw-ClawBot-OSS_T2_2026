@@ -3,7 +3,7 @@
 #   .\script_window.ps1 Install
 #   .\script_window.ps1 AddChannel
 #   .\script_window.ps1 Approve -Code 483921
-# Chạy trên Windows; nếu dùng OpenClaw qua WSL2, các lệnh openclaw sẽ chạy trong WSL.
+# Chạy trên Windows; openclaw chạy trong WSL2 (Ubuntu).
 
 param(
     [Parameter(Mandatory = $true, Position = 0)]
@@ -38,23 +38,23 @@ function Get-OpenClawCmd {
     if ($exe) { return 'native' }
     $wsl = Get-Command wsl -ErrorAction SilentlyContinue
     if ($wsl) { return 'wsl' }
-    throw 'openclaw not found. Install OpenClaw (run Install in this script) and ensure openclaw is in PATH or WSL.'
+    throw 'openclaw not found. Chạy Install trước, hoặc cài WSL + Ubuntu.'
 }
 
 switch ($Command) {
     'Install' {
-        Write-Host 'Installing OpenClaw (via WSL)...'
+        Write-Host 'Cài OpenClaw qua npm trong WSL...'
         try {
-            wsl bash -c 'curl -fsSL https://openclaw.ai/install.sh | bash'
+            wsl bash -c 'source ~/.nvm/nvm.sh && nvm use 22 && npm install -g openclaw'
         } catch {
-            Write-Host 'WSL not available or install failed. Run manually in WSL (Ubuntu):'
-            Write-Host '  curl -fsSL https://openclaw.ai/install.sh | bash'
+            Write-Host 'WSL không khả dụng hoặc cài thất bại. Chạy thủ công trong WSL:'
+            Write-Host '  source ~/.nvm/nvm.sh && nvm use 22 && npm install -g openclaw'
             Write-Host '  openclaw onboard'
             exit 1
         }
         Write-Host ''
-        Write-Host 'Install done. Run the following and paste your OpenAI API key when prompted:'
-        Write-Host '  wsl openclaw onboard'
+        Write-Host 'Cài xong! Chạy onboarding trong WSL:'
+        Write-Host '  wsl bash -c "source ~/.nvm/nvm.sh && nvm use 22 && openclaw onboard"'
         Write-Host ''
     }
 
@@ -62,7 +62,7 @@ switch ($Command) {
         Load-Env
         $token = [System.Environment]::GetEnvironmentVariable('TELEGRAM_BOT_TOKEN', 'Process')
         if ([string]::IsNullOrWhiteSpace($token)) {
-            Write-Error 'TELEGRAM_BOT_TOKEN not set. Set it in .env (repo root or config/) or in environment.'
+            Write-Error 'TELEGRAM_BOT_TOKEN chưa set. Đặt trong .env hoặc export trước.'
         }
         $cmd = Get-OpenClawCmd
         if ($cmd -eq 'wsl') {
@@ -75,7 +75,6 @@ switch ($Command) {
     'Approve' {
         if ([string]::IsNullOrWhiteSpace($Code)) {
             Write-Host 'Usage: .\script_window.ps1 Approve -Code 483921'
-            Write-Host 'Example: .\script_window.ps1 Approve -Code 483921'
             exit 1
         }
         $cmd = Get-OpenClawCmd
