@@ -1,0 +1,23 @@
+# Environment and secrets - never commit
+.env
+config/.env
+*.env.local
+.env.*.local
+
+# OpenClaw local data (if used)
+.openclaw/
+~/.openclaw/
+
+# OS and editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Python (if any tooling added later)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env.venv
