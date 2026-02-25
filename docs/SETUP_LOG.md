@@ -117,17 +117,27 @@ openclaw health
 
 ## 5. Kết nối Telegram
 
+> **Ví dụ thực tế:** bot `@doanngoccuong_bot` đã setup theo đúng các bước dưới đây.
+
 ### Bước 1 — Tạo bot (BotFather)
 
 1. Mở Telegram, tìm **@BotFather**
 2. Gửi `/newbot`, đặt tên + username (phải kết thúc bằng `bot`)
-3. Copy **token** (dạng `1234567890:AAF...`)
+3. Copy **token** (dạng `8458647598:AAH9nLQ...`)
 
-### Bước 2 — Thêm channel
+### Bước 2 — Enable Telegram plugin
+
+> Bước này hay bị bỏ qua — nếu thiếu sẽ báo `Unknown channel: telegram`.
 
 ```bash
-export TELEGRAM_BOT_TOKEN="your_token_here"
-openclaw channels add telegram --token "$TELEGRAM_BOT_TOKEN"
+openclaw plugins enable telegram
+openclaw gateway restart  # hoặc: openclaw gateway --force
+```
+
+### Bước 3 — Thêm channel
+
+```bash
+openclaw channels add --channel telegram --token "YOUR_BOT_TOKEN"
 ```
 
 Hoặc đặt token vào `config/.env` rồi chạy:
@@ -136,24 +146,31 @@ Hoặc đặt token vào `config/.env` rồi chạy:
 ./scripts/add_telegram_channel.sh
 ```
 
-### Bước 3 — Pairing
-
-1. Mở bot trên Telegram, gửi bất kỳ tin (vd: `hello`)
-2. Bot trả về mã 6 số (vd: `483921`)
-3. Approve:
+Kiểm tra đã add thành công:
 
 ```bash
-openclaw pairing approve telegram 483921
-# hoặc
-./scripts/approve_pairing.sh 483921
+openclaw channels list
+# Output: Telegram default: configured, token=config, enabled
 ```
+
+### Bước 4 — Pairing (user muốn chat phải pair)
+
+1. Mở bot trên Telegram (`@doanngoccuong_bot`), gửi bất kỳ tin (vd: `hello`)
+2. Bot trả về **mã pairing** dạng chữ+số (vd: `S7UCZ8QY`)
+3. Approve trên máy:
+
+```bash
+openclaw pairing approve telegram S7UCZ8QY
+```
+
+Sau khi approve, bot nhắn lại xác nhận — có thể chat ngay.
 
 ### Windows (PowerShell)
 
 ```powershell
 .\scripts\script_window.ps1 Install       # cài OpenClaw qua WSL
 .\scripts\script_window.ps1 AddChannel    # thêm Telegram (cần .env với TELEGRAM_BOT_TOKEN)
-.\scripts\script_window.ps1 Approve -Code 483921
+.\scripts\script_window.ps1 Approve -Code S7UCZ8QY
 ```
 
 ---
